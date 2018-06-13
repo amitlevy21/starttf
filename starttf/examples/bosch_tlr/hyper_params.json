@@ -53,6 +53,7 @@
         "augmentation": {
             "steps": 10,
             "keep_empty_image_prob": 0.0,
+            "enable_texture_augmentation": true,
             "random_crop": {
                 "shape": {
                     "width": 256,

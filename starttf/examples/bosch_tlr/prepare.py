@@ -1,18 +1,16 @@
+import sys
 import os
 import numpy as np
 import math
-import random
 
 from starttf.utils.hyperparams import load_params
 from starttf.tfrecords.autorecords import write_data
-from starttf.utils.image_manipulation import crop
 
 from opendatalake.detection.bosch_tlr import bosch_tlr
-from opendatalake.texture_augmentation import full_texture_augmentation
+from opendatalake.detection.utils import augment_detections
 
 
 def preprocess_feature(hyper_params, feature):
-    feature["image"] = full_texture_augmentation(feature["image"])
     return feature
 
 
@@ -70,62 +68,12 @@ def preprocess_label(hyper_params, feature, label):
     return processed_label
 
 
-def move_detections(label, dy, dx):
-    for k in label.keys():
-        detections = label[k]
-        for detection in detections:
-            detection.cy += dy
-            detection.cx += dx
-
-
-def augment_data(hyper_params, feature, label):
-    # Do not augment these ways:
-    # 1) Rotation is not possible
-    # 3) Scaling is not possible, because it ruins depth perception
-    # However, random crops can improve performance. (Training speed and accuracy)
-    if hyper_params.problem.get_or_default("augmentation", None) is None:
-        return feature, label
-
-    img_h, img_w, img_c = feature["image"].shape
-    augmented_feature = {}
-    augmented_label = {}
-    augmented_feature["image"] = feature["image"].copy()
-
-    for k in label.keys():
-        augmented_label[k] = [detection.copy() for detection in label[k]]
-
-    if hyper_params.problem.augmentation.get_or_default("random_crop", None) is not None and len(augmented_label["detections_2d"]) != 0:
-        img_h, img_w, img_c = augmented_feature["image"].shape
-        target_w = hyper_params.problem.augmentation.random_crop.shape.width
-        target_h = hyper_params.problem.augmentation.random_crop.shape.height
-
-        idx = random.randint(0, len(augmented_label["detections_2d"]) - 1)
-        detection = augmented_label["detections_2d"][idx]
-
-        # Compute start point so that crop fit's into image and random crop contains detection
-        start_x = int(detection.cx - random.random() * (target_w-20) / 2.0 - 10)
-        start_y = int(detection.cy - random.random() * (target_h-20) / 2.0 - 10)
-        if start_x < 0:
-            start_x = 0
-        if start_y < 0:
-            start_y = 0
-        if start_x >= img_w - target_w:
-            start_x = img_w - target_w - 1
-        if start_y >= img_h - target_h:
-            start_y = img_h - target_h - 1
-
-        # Crop image
-        augmented_feature["image"] = crop(augmented_feature["image"], start_y, start_x, target_h, target_w)
-
-        # Crop labels
-        move_detections(augmented_label, -start_y, -start_x)
-
-    return augmented_feature, augmented_label
-
-
 if __name__ == "__main__":
     # Load the hyper parameters.
-    hyper_params = load_params("D:/Data/Projects/starttf/starttf/examples/bosch_tlr/hyper_params.json")
+    hyper_params_path = "starttf/examples/bosch_tlr/hyper_params.json"
+    if len(sys.argv) > 1:
+        hyper_params_path = sys.argv[1] + "/" + hyper_params_path
+    hyper_params = load_params(hyper_params_path)
 
     # Get a generator and its parameters
     train_gen, train_gen_params = bosch_tlr(base_dir=hyper_params.problem.data_path, phase="train")
@@ -136,5 +84,5 @@ if __name__ == "__main__":
     validation_record_path = os.path.join(hyper_params.train.tf_records_path, "validation")
 
     # Write the data
-    write_data(hyper_params, train_record_path, train_gen, train_gen_params, 8, preprocess_feature=preprocess_feature, preprocess_label=preprocess_label, augment_data=augment_data)
-    write_data(hyper_params, validation_record_path, validation_gen, validation_gen_params, 8, preprocess_feature=preprocess_feature, preprocess_label=preprocess_label, augment_data=augment_data)
+    write_data(hyper_params, train_record_path, train_gen, train_gen_params, 8, preprocess_feature=preprocess_feature, preprocess_label=preprocess_label, augment_data=augment_detections)
+    write_data(hyper_params, validation_record_path, validation_gen, validation_gen_params, 8, preprocess_feature=preprocess_feature, preprocess_label=preprocess_label, augment_data=augment_detections)
