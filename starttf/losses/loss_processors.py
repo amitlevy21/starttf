@@ -94,19 +94,21 @@ def mask_loss(input_tensor, binary_tensor):
         return input_tensor * mask
 
 
-def multiloss(losses):
+def multiloss(losses, logging_namespace="multiloss"):
     """
     Create a loss from multiple losses my mixing them.
     This multi-loss implementation is inspired by the Paper "Multi-Task Learning Using Uncertainty to Weight Losses
     for Scene Geometry and Semantics" by Kendall, Gal and Cipolla.
     :param losses: A list containing all losses that should be merged.
+    :param logging_namespace: Variable scope in which multiloss lives.
     :return: A single loss.
     """
-    with tf.variable_scope("multiloss"):
+    with tf.variable_scope(logging_namespace):
         sum_loss = 0
         for i, loss in enumerate(losses):
             with tf.variable_scope(str(i)) as scope:
                 sigma = tf.get_variable(name="sigma", dtype=tf.float32, initializer=tf.constant(1.0), trainable=True)
                 sigma_2 = tf.pow(sigma, 2)
+                tf.summary.scalar("sigma2", sigma_2)
                 sum_loss += 0.5 / sigma_2 * loss + tf.log(sigma_2 + 1.0)
         return sum_loss

@@ -1,0 +1,102 @@
+{
+    "problem": {
+        "data_path": "datasets/bosch_tlr",
+        "omit_not_annotated": true,
+        "shrink": 1.0,
+        "number_of_categories": 4,
+        "number_of_directions": 3,
+        "class_mapping": {
+            "Background": 0,
+            "Green": 1,
+            "GreenStraight": 1,
+            "GreenStraightRight": 1,
+            "GreenStraightLeft": 1,
+            "GreenRight":  1,
+            "GreenLeft": 1,
+            "Yellow": 2,
+            "YellowStraight": 2,
+            "YellowStraightRight": 2,
+            "YellowStraightLeft": 2,
+            "YellowRight": 2,
+            "YellowLeft": 2,
+            "Red": 3,
+            "RedStraight": 3,
+            "RedStraightRight": 3,
+            "RedStraightLeft": 3,
+            "RedRight": 3,
+            "RedLeft": 3,
+            "off": 0,
+            "Ignore": 4
+        },
+        "direction_mapping": {
+            "Green": 0,
+            "GreenStraight": 3,
+            "GreenStraightRight": 3,
+            "GreenStraightLeft": 3,
+            "GreenRight":  1,
+            "GreenLeft": 2,
+            "Yellow": 0,
+            "YellowStraight": 3,
+            "YellowStraightRight": 3,
+            "YellowStraightLeft": 3,
+            "YellowRight": 1,
+            "YellowLeft": 2,
+            "Red": 0,
+            "RedStraight": 3,
+            "RedStraightRight": 3,
+            "RedStraightLeft": 3,
+            "RedRight": 1,
+            "RedLeft": 2,
+            "off": 3,
+            "Ignore": 3
+        },
+        "augmentation": {
+            "steps": 10,
+            "keep_empty_image_prob": 0.0,
+            "random_crop": {
+                "shape": {
+                    "width": 256,
+                    "height": 256
+                }
+            }
+        }
+    },
+    "train": {
+        "optimizer": {
+            "type": "adam"
+        },
+        "learning_rate": {
+            "type": "exponential",
+            "start_value": 0.001,
+            "end_value": 0.00001
+        },
+        "batch_size": 16,
+        "steps": 20000,
+        "summary_steps": 50,
+        "save_checkpoint_steps": 200,
+        "keep_checkpoint_max": 200,
+        "throttle_secs": 1800, // Evaluate every 30 Minutes.
+        "loss_weights": {
+            "automatic": true,
+            "class_id": 1.0,
+            "direction": 1.0,
+            "rect": 10.0
+        },
+        "normalization_strength": {
+            "class_id": 0.95,
+            "direction": 0.95
+        },
+        "use_batch_alpha_balancing": true,
+        "checkpoint_path": "checkpoints/bosch_tlr",
+        "tf_records_path": "tfrecords/bosch_tlr"
+    },
+    "arch": {
+    },
+    "vgg16": {
+        "encoder_only": true,
+        "weight_file": "weights/vgg16.npz"
+    },
+    "simple_detector": {
+        "conv6_kernel_size": 1
+    }
+}
