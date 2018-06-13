@@ -11,9 +11,9 @@ from starttf.utils.hyperparams import load_params
 if __name__ == "__main__":
     # Load the hyper parameters.
     hyper_params_path = "starttf/examples/bosch_tlr/hyper_params.json"
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 1 and sys.argv[1] != "--continue":
         hyper_params_path = sys.argv[1] + "/" + hyper_params_path
     hyper_params = load_params(hyper_params_path)
 
     # Invoke the training
-    easy_train_and_evaluate(hyper_params, create_model, create_loss)
+    easy_train_and_evaluate(hyper_params, create_model, create_loss, continue_training="--continue" in sys.argv)
