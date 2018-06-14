@@ -6,6 +6,7 @@ import json
 import tensorflow as tf
 
 from starttf.utils.plot_losses import DefaultLossCallback
+from starttf.utils.session_config import get_default_config
 
 from starttf.tfrecords.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION
 
@@ -92,7 +93,7 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plott
     return my_model_fn
 
 
-def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plotting=False, continue_training=False):
+def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plotting=False, continue_training=False, session_config=None):
     """
     Train and evaluate your model without any boilerplate code.
 
@@ -125,6 +126,9 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
     """
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyper_params.train.checkpoint_path + "/" + time_stamp
+    
+    if session_config is None:
+        session_config = get_default_config()
 
     if continue_training:
         chkpts = sorted([name for name in os.listdir(hyper_params.train.checkpoint_path)])
@@ -158,7 +162,8 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
                                         keep_checkpoint_max=hyper_params.train.keep_checkpoint_max,
                                         keep_checkpoint_every_n_hours=1)
     else:
-        config = tf.estimator.RunConfig(model_dir=chkpt_path,
+        config = tf.estimator.RunConfig(session_config=session_config,
+                                        model_dir=chkpt_path,
                                         save_summary_steps=hyper_params.train.summary_steps,
                                         save_checkpoints_steps=hyper_params.train.save_checkpoint_steps,
                                         keep_checkpoint_max=hyper_params.train.keep_checkpoint_max,
