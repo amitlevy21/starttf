@@ -26,3 +26,15 @@ def overlay_classification_on_image(classification, rgb_image, scale=1):
         scaled_image = tf.image.resize_images(casted_classification, size=target_size, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         cropped_img = tf.image.crop_to_bounding_box(scaled_image, 0, 0, size[0], size[1])
         return 0.5 * rgb_image + 0.5 * 255 * cropped_img
+
+
+def inflate_to_one_hot(tensor, classes):
+    """
+    Converts a tensor with index form to a one hot tensor.
+    :param tensor: A tensor of shape [batch, h, w, 1]
+    :param classes: The number of classes that exist. (length of one hot encoding)
+    :return: A tensor of shape [batch, h, w, classes].
+    """
+    one_hot = tf.one_hot(tensor, classes)
+    shape = one_hot.get_shape().as_list()
+    return tf.reshape(one_hot, shape=[-1, shape[1], shape[2], shape[4]])
