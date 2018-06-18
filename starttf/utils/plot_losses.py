@@ -25,9 +25,73 @@ class DefaultLossCallback(tf.train.SessionRunHook):
         self.checkpoint_dir = checkpoint_dir
         self.report_storage = report_storage
         self.mode = mode
+        self.inline_plotting = inline_plotting and not NO_IPYTHON
+        if mode not in self.report_storage:
+            if self.checkpoint_dir.endswith("/eval"):
+                self.checkpoint_dir = self.checkpoint_dir[:-5]
+            if os.path.exists(self.checkpoint_dir + "/images"):
+                for file in os.listdir(self.checkpoint_dir + "/images"):
+                    if file.endswith(".csv"):
+                        self._read_csv(os.path.join(self.checkpoint_dir + "/images", file)) 
+            self.plot()
         if mode not in self.report_storage:
             self.report_storage[mode] = {}
-        self.inline_plotting = inline_plotting and not NO_IPYTHON
+        
+    def _read_csv(self, filename):
+        title = filename.split("/")[-1][:-4].replace(".", "/")
+        with open(filename, "r") as f:
+            lines = f.read().splitlines()
+            cols = lines[0].split(",")
+            for col in cols:
+                mode = col.split("/")[0]
+                if mode not in self.report_storage:
+                    self.report_storage[mode] = {}
+                if title not in self.report_storage[mode]:
+                    self.report_storage[mode][title] = []
+                if "step" not in self.report_storage[mode]:
+                    self.report_storage[mode]["step"] = []
+
+            for l_idx, row in enumerate(lines[1:]):
+                for i, val in enumerate(row.split(",")):
+                    mode = cols[i].split("/")[0]
+                    if val == "":
+                        continue
+                    if cols[i].endswith("x"): # Step handling
+                        if len(self.report_storage[mode]["step"]) < l_idx:
+                            self.report_storage[mode]["step"].append(int(val))
+                    else:
+                        self.report_storage[mode][title].append(float(val))
+        
+    def _compute_mean_per_step(self, mode, k):
+        steps = []
+        values = []
+        n = []
+        last_step = -1
+        for step, val in zip(self.report_storage[mode]["step"], self.report_storage[mode][k]):
+            if step != last_step:
+                values.append(0)
+                steps.append(step)
+                n.append(0)
+                last_step = step
+            values[-1] += val
+            n[-1] += 1
+                            
+        for i in range(len(values)):
+            values[i] = values[i] / float(n[i])
+
+        return steps, values
+    
+    def plot(self):
+        dummy_mode = self.report_storage.keys()[0]
+        for k in self.report_storage[dummy_mode].keys():
+            if k == "step":
+                continue
+            data = []
+            last_step = -1
+            for mode in self.report_storage.keys():
+                steps, values = self._compute_mean_per_step(mode, k)
+                data.append((mode + "/" + k, steps, values))
+            create_plot(k, self.checkpoint_dir, data, self.inline_plotting)
 
     def after_run(self, run_context, run_values):
         results = run_values.results
@@ -37,17 +101,13 @@ class DefaultLossCallback(tf.train.SessionRunHook):
                     self.report_storage[self.mode][k] = []
                 self.report_storage[self.mode][k].append(results[k])
 
-            if self.inline_plotting:
+            if self.inline_plotting and self.mode != "eval":
                 clear_output()
 
             print("{}: Step {}, Loss {}".format(self.mode, self.report_storage[self.mode]["step"][-1], self.report_storage[self.mode]["loss"][-1]))
 
             if self.mode != "eval":
-                for k in results.keys():
-                    if k == "step":
-                        continue
-                    data = [(mode + "/" + k, self.report_storage[mode]["step"], self.report_storage[mode][k]) for mode in self.report_storage.keys()]
-                    create_plot(k, self.checkpoint_dir, data, self.inline_plotting)
+                self.plot()
 
     def before_run(self, run_context):
         self.losses["step"] = tf.train.get_global_step()
