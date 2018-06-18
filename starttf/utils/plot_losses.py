@@ -33,7 +33,7 @@ class DefaultLossCallback(tf.train.SessionRunHook):
                 for file in os.listdir(self.checkpoint_dir + "/images"):
                     if file.endswith(".csv"):
                         self._read_csv(os.path.join(self.checkpoint_dir + "/images", file)) 
-            self.plot()
+            self.plot_all()
         if mode not in self.report_storage:
             self.report_storage[mode] = {}
         
@@ -81,17 +81,21 @@ class DefaultLossCallback(tf.train.SessionRunHook):
 
         return steps, values
     
-    def plot(self):
+    def plot_all(self):
         dummy_mode = self.report_storage.keys()[0]
-        for k in self.report_storage[dummy_mode].keys():
-            if k == "step":
+        self.plot("loss")
+        for k in sorted(list(self.report_storage[dummy_mode].keys())):
+            if k == "step" or k == "loss":
                 continue
-            data = []
-            last_step = -1
-            for mode in self.report_storage.keys():
-                steps, values = self._compute_mean_per_step(mode, k)
-                data.append((mode + "/" + k, steps, values))
-            create_plot(k, self.checkpoint_dir, data, self.inline_plotting)
+            self.plot(k)
+                
+    def plot(self, k):
+        data = []
+        last_step = -1
+        for mode in self.report_storage.keys():
+            steps, values = self._compute_mean_per_step(mode, k)
+            data.append((mode + "/" + k, steps, values))
+        create_plot(k, self.checkpoint_dir, data, self.inline_plotting)
 
     def after_run(self, run_context, run_values):
         results = run_values.results
@@ -107,7 +111,7 @@ class DefaultLossCallback(tf.train.SessionRunHook):
             print("{}: Step {}, Loss {}".format(self.mode, self.report_storage[self.mode]["step"][-1], self.report_storage[self.mode]["loss"][-1]))
 
             if self.mode != "eval":
-                self.plot()
+                self.plot_all()
 
     def before_run(self, run_context):
         self.losses["step"] = tf.train.get_global_step()
