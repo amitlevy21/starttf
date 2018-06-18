@@ -82,7 +82,10 @@ class DefaultLossCallback(tf.train.SessionRunHook):
         return steps, values
     
     def plot_all(self):
-        dummy_mode = self.report_storage.keys()[0]
+        keys = list(self.report_storage.keys())
+        if len(keys) == 0:
+            return
+        dummy_mode = keys[0]
         self.plot("loss")
         for k in sorted(list(self.report_storage[dummy_mode].keys())):
             if k == "step" or k == "loss":
