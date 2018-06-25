@@ -6,7 +6,7 @@ import tensorflow as tf
 
 def create_model(input_tensor, mode, hyper_params):
     model = vgg_model(input_tensor, mode, hyper_params)
-    with tf.variable_scope("simple_detector"):
+    with tf.variable_scope("simple_detector_v2"):
         num_classes = hyper_params.get_or_dummy("problem").get_or_default("number_of_categories", 2)
 
         conv6_size = hyper_params.get_or_dummy("simple_detector").get_or_default("conv6_kernel_size", 7)
@@ -16,14 +16,16 @@ def create_model(input_tensor, mode, hyper_params):
                                           padding="valid", activation=tf.nn.relu, name="conv7")
 
         # Classification
-        model["logits"] = tf.layers.conv2d(inputs=model["conv7"], filters=num_classes, kernel_size=(1, 1),
+        model["logits_raw"] = tf.layers.conv2d(inputs=model["conv7"], filters=num_classes * 64, kernel_size=(1, 1),
                                                strides=(1, 1),
-                                               padding="valid", activation=None, name="logits")
+                                               padding="valid", activation=None, name="logits_raw")
+        model["logits"] = tile_2d(model["logits_raw"], 8, 8, name="logits", reorder_required=True)
         model["probs"] = tf.nn.softmax(model["logits"], name="probs")
 
         # Bounding rect regression
-        model["rect"] = tf.layers.conv2d(inputs=model["conv7"], filters=4, kernel_size=(1, 1),
+        model["rect_raw"] = tf.layers.conv2d(inputs=model["conv7"], filters=4 * 64, kernel_size=(1, 1),
                                              strides=(1, 1),
-                                             padding="valid", activation=None, name="rect")
+                                             padding="valid", activation=None, name="rect_raw")
+        model["rect"] = tile_2d(model["rect_raw"], 8, 8, name="rect", reorder_required=True)
 
     return model
