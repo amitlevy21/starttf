@@ -38,7 +38,7 @@ def focus_loss(labels, probs, loss, gamma):
         p_t = tf.reduce_sum(probs * labels, axis=-1)# + tf.reduce_sum((1.0 - probs) * (1.0 - labels), axis=-1)
 
         focal_factor = tf.pow(1.0 - p_t, gamma) if gamma > 0 else 1  # Improve stability for gamma = 0
-        return focal_factor * loss
+        return tf.stop_gradient(focal_factor) * loss
 
 
 def variable_focus_loss(labels, probs, loss, epsilon=1e-8, max_gamma=20):
