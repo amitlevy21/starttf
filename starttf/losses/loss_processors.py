@@ -1,4 +1,5 @@
 import tensorflow as tf
+from starttf.utils.misc import tf_if
 
 
 def alpha_balance_loss(labels, loss, alpha_weights):
@@ -40,6 +41,37 @@ def focus_loss(labels, probs, loss, gamma):
         return focal_factor * loss
 
 
+def variable_focus_loss(labels, probs, loss, epsilon=1e-8, max_gamma=20):
+    """
+    Calculate the alpha balanced focal loss with a variable focus.
+
+    The focal factor gamma is computed by -log(reduce_mean(p_t)) + epsilon).
+    Also see the normal focus_loss.
+
+    There is yet no paper for this type of loss.
+
+    :param labels: A float tensor of shape [batch_size, ..., num_classes] representing the label class probabilities.
+    :param probs: A float tensor of shape [batch_size, ..., num_classes] representing the probs (after softmax).
+    :param loss: A float tensor of shape [batch_size, ...] representing the loss that should be focused.
+    :param epsilon: Offset of log for numerical stability.
+    :param max_gamma: Maximal allowed gamma. If greater cropping is applied.
+    :return: A tensor representing the weighted cross entropy.
+    """
+    with tf.variable_scope("variable_focus_loss"):
+        max_gamma = tf.constant(max_gamma, dtype=tf.float32)
+        # Compute p_t that is used in paper.
+        p_t = tf.reduce_sum(probs * labels, axis=-1)
+        p_avg = tf.reduce_mean(p_t)
+        tf.summary.scalar("p_avg", p_avg)
+        gamma = -tf.log(p_avg + epsilon)
+        gamma = tf_if(tf.greater(gamma, max_gamma), max_gamma, gamma)
+        tf.summary.scalar("gamma", gamma)
+
+        # Improve stability for gamma <= 0
+        focal_factor = tf_if(tf.greater(gamma, 0), tf.pow(1.0 - p_t, gamma), 1)
+        return tf.stop_gradient(focal_factor) * loss
+
+
 def interpolate_loss(labels, loss1, loss2, interpolation_values):
     """
     Interpolate two losses linearly.
@@ -62,10 +94,10 @@ def batch_alpha_balance_loss(labels, loss):
 
     This means for each sample the cross entropy is calculated and then weighted by the class specific weight.
 
+    There is yet no paper for this type of loss.
+
     :param labels: A float tensor of shape [batch_size, ..., num_classes] representing the label class probabilities.
     :param loss: A float tensor of shape [batch_size, ...] representing the loss that should be focused.
-    :param alpha_weights: A float tensor of shape [1, ..., num_classes] (... is filled with ones to match number
-                              of dimensions to labels tensor) representing the weights for each class.
     :return: A tensor representing the weighted cross entropy.
     """
     with tf.variable_scope("batch_alpha_balance"):

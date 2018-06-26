@@ -36,3 +36,15 @@ def download(url, filename):
     :return:
     """
     urlretrieve(url, filename)
+
+
+def tf_if(condition, a, b):
+    """
+    Implements an if condition in tensorflow.
+    :param condition: A boolean condition.
+    :param a: Case a.
+    :param b: Case b.
+    :return: A if condition was true, b otherwise.
+    """
+    int_condition = tf.to_float(tf.to_int64(condition))
+    return a * int_condition + (1 - int_condition) * b
