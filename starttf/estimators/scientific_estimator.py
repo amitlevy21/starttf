@@ -93,7 +93,8 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plott
     return my_model_fn
 
 
-def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plotting=False, continue_training=False, session_config=None):
+def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plotting=False, continue_training=False,
+                            session_config=None, log_suffix=None):
     """
     Train and evaluate your model without any boilerplate code.
 
@@ -122,10 +123,14 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
     :param create_loss: A create_loss function like that in starttf.examples.mnist.loss.
     :param inline_plotting: When you are using jupyter notebooks you can tell it to plot the loss directly inside the notebook.
     :param continue_training: Bool, continue last training in the checkpoint path specified in the hyper parameters.
+    :param session_config: A configuration for the session.
+    :param log_suffix: A suffix for the log folder, so you can remember what was special about the run.
     :return:
     """
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyper_params.train.checkpoint_path + "/" + time_stamp
+    if log_suffix is not None:
+        chkpt_path = chkpt_path + "_" + log_suffix
     
     if session_config is None:
         session_config = get_default_config()
