@@ -1,4 +1,4 @@
-from starttf.models.simple_detector import create_model as huval_model
+from starttf.models.simple_detector_v2 import create_model as huval_model
 from starttf.layers.tile_2d import tile_2d
 
 import tensorflow as tf

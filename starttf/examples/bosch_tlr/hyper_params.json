@@ -76,7 +76,7 @@
         "summary_steps": 50,
         "save_checkpoint_steps": 200,
         "keep_checkpoint_max": 200,
-        "throttle_secs": 1800, // Evaluate every 30 Minutes.
+        "throttle_secs": 600,
         "loss_weights": {
             "automatic": true,
             "class_id": 1.0,
@@ -84,10 +84,13 @@
             "rect": 10.0
         },
         "normalization_strength": {
-            "class_id": 0.95,
-            "direction": 0.95
+            "class_id": 0.0,
+            "direction": 0.0
         },
-        "use_batch_alpha_balancing": true,
+        "focus_strength": {
+            "class_id": 1.0,
+            "direction": 1.0
+        },
         "checkpoint_path": "checkpoints/bosch_tlr",
         "tf_records_path": "tfrecords/bosch_tlr"
     },
