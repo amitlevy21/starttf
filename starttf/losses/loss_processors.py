@@ -41,7 +41,7 @@ def focus_loss(labels, probs, loss, gamma):
         return tf.stop_gradient(focal_factor) * loss
 
 
-def variable_focus_loss(labels, probs, loss, epsilon=1e-8, max_gamma=20):
+def variable_focus_loss(labels, probs, loss, mask=None, epsilon=1e-8, max_gamma=20):
     """
     Calculate the alpha balanced focal loss with a variable focus.
 
@@ -53,6 +53,7 @@ def variable_focus_loss(labels, probs, loss, epsilon=1e-8, max_gamma=20):
     :param labels: A float tensor of shape [batch_size, ..., num_classes] representing the label class probabilities.
     :param probs: A float tensor of shape [batch_size, ..., num_classes] representing the probs (after softmax).
     :param loss: A float tensor of shape [batch_size, ...] representing the loss that should be focused.
+    :param mask: A float tensor of shape [batch_size, ...] representing the mask.
     :param epsilon: Offset of log for numerical stability.
     :param max_gamma: Maximal allowed gamma. If greater cropping is applied.
     :return: A tensor representing the weighted cross entropy.
@@ -61,7 +62,14 @@ def variable_focus_loss(labels, probs, loss, epsilon=1e-8, max_gamma=20):
         max_gamma = tf.constant(max_gamma, dtype=tf.float32)
         # Compute p_t that is used in paper.
         p_t = tf.reduce_sum(probs * labels, axis=-1)
-        p_avg = tf.reduce_mean(p_t)
+        p_avg = 0.5
+        if mask is not None:
+            mask = tf.cast(tf.cast(mask, tf.bool), tf.float32)
+            active_pixels = tf.reduce_sum(mask)
+            p_avg = tf.reduce_sum(p_t * mask) / active_pixels
+        else:
+            p_avg = tf.reduce_mean(p_t)
+
         tf.summary.scalar("p_avg", p_avg)
         gamma = -tf.log(p_avg + epsilon)
         gamma = tf_if(tf.greater(gamma, max_gamma), max_gamma, gamma)
@@ -69,7 +77,10 @@ def variable_focus_loss(labels, probs, loss, epsilon=1e-8, max_gamma=20):
 
         # Improve stability for gamma <= 0
         focal_factor = tf_if(tf.greater(gamma, 0), tf.pow(1.0 - p_t, gamma), 1)
-        return tf.stop_gradient(focal_factor) * loss
+        result = tf.stop_gradient(focal_factor) * loss
+        if mask is not None:
+            result = result * mask
+        return result
 
 
 def interpolate_loss(labels, loss1, loss2, interpolation_values):
