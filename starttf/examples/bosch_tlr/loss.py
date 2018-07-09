@@ -1,6 +1,6 @@
 import tensorflow as tf
 from starttf.losses.basic_losses import smooth_l1_distance
-from starttf.losses.loss_processors import mask_loss, multiloss, batch_alpha_balance_loss, interpolate_loss
+from starttf.losses.loss_processors import mask_loss, multiloss, batch_alpha_balance_loss, interpolate_loss, variable_focus_loss
 from starttf.losses.utils import overlay_classification_on_image
 
 
@@ -43,7 +43,10 @@ def create_loss(model, labels, mode, hyper_params):
             ce_2 = batch_alpha_balance_loss(labels=class_label[:, :, :, :k], loss=ce_1)
             ce_3 = interpolate_loss(labels=class_label[:, :, :, :k], loss1=ce_1, loss2=ce_2,
                                     interpolation_values=hyper_params.train.normalization_strength.class_id)
-            masked_ce = mask_loss(input_tensor=ce_3, binary_tensor=class_label[:, :, :, 0] + mask)
+            ce_4 = variable_focus_loss(labels=class_label[:, :, :, :k], probs=model["probs"], loss=ce_3, mask=class_label[:, :, :, 0] + mask)
+            ce_5 = interpolate_loss(labels=class_label[:, :, :, :k], loss1=ce_3, loss2=ce_4,
+                                    interpolation_values=hyper_params.train.focus_strength.class_id)
+            masked_ce = mask_loss(input_tensor=ce_5, binary_tensor=class_label[:, :, :, 0] + mask)
             losses["class_id_loss"] = tf.reduce_mean(masked_ce)
 
             tf.summary.image("image/class_id_loss", overlay_classification_on_image(classification=tf.expand_dims(masked_ce, axis=-1),
@@ -59,7 +62,10 @@ def create_loss(model, labels, mode, hyper_params):
             ce_2 = batch_alpha_balance_loss(labels=direction_label[:, :, :, :d], loss=ce_1)
             ce_3 = interpolate_loss(labels=direction_label[:, :, :, :d], loss1=ce_1, loss2=ce_2,
                                     interpolation_values=hyper_params.train.normalization_strength.direction)
-            losses["direction_loss"] = tf.reduce_mean(mask_loss(input_tensor=ce_3, binary_tensor=direction_mask))
+            ce_4 = variable_focus_loss(labels=direction_label[:, :, :, :d], probs=model["direction_probs"], loss=ce_3, mask=direction_mask)
+            ce_5 = interpolate_loss(labels=direction_label[:, :, :, :d], loss1=ce_3, loss2=ce_4,
+                                    interpolation_values=hyper_params.train.focus_strength.direction)
+            losses["direction_loss"] = tf.reduce_mean(mask_loss(input_tensor=ce_5, binary_tensor=direction_mask))
 
             tf.summary.image("image/direction_preds", overlay_classification_on_image(classification=model["direction_probs"][:, :, :, 0:min(d, 3)],
                                                                                      rgb_image=model["image"], scale=4))

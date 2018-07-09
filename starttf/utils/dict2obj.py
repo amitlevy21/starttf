@@ -1,5 +1,8 @@
 import json
-from jsmin import jsmin
+try:
+    from jsmin import jsmin
+except ModuleNotFoundError:
+    jsmin = lambda x: x
 
 
 def json_file_to_object(filepath):

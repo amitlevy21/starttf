@@ -33,9 +33,13 @@ def preprocess_label(hyper_params, feature, label):
     # Set everything to background
     processed_label["class_id"][:, :, 0] = 0
     processed_label["direction"][:, :, 0] = hyper_params.problem.number_of_directions
+    
+    # Sort detections by distance (furthest first)
+    detections = label["detections_2d"]
+    detections = sorted(detections, key=lambda x: -x[1].dist)
 
     cells_occupied = 0
-    for detection in label["detections_2d"]:
+    for detection in detections:
         # If background there is nothing to do
         if detection.class_id == 0:
             continue
@@ -47,8 +51,8 @@ def preprocess_label(hyper_params, feature, label):
         y1 = cy - h / 2.0 * hyper_params.problem.shrink
         y2 = cy + h / 2.0 * hyper_params.problem.shrink
 
-        for x in range(int(round(x1 / region_size)), int(round(x2 / region_size)), 1):
-            for y in range(int(round(y1 / region_size)), int(round(y2 / region_size)), 1):
+        for x in range(int(math.floor(x1 / region_size)), int(math.ceil(x2 / region_size)), 1):
+            for y in range(int(math.floor(y1 / region_size)), int(math.ceil(y2 / region_size)), 1):
                 anchor_x = x * region_size
                 anchor_y = y * region_size
 
@@ -68,13 +72,7 @@ def preprocess_label(hyper_params, feature, label):
     return processed_label
 
 
-if __name__ == "__main__":
-    # Load the hyper parameters.
-    hyper_params_path = "starttf/examples/bosch_tlr/hyper_params.json"
-    if len(sys.argv) > 1:
-        hyper_params_path = sys.argv[1] + "/" + hyper_params_path
-    hyper_params = load_params(hyper_params_path)
-
+def main(hyper_params):
     # Get a generator and its parameters
     train_gen, train_gen_params = bosch_tlr(base_dir=hyper_params.problem.data_path, phase="train")
     validation_gen, validation_gen_params = bosch_tlr(base_dir=hyper_params.problem.data_path, phase="validation")
@@ -86,3 +84,12 @@ if __name__ == "__main__":
     # Write the data
     write_data(hyper_params, train_record_path, train_gen, train_gen_params, 8, preprocess_feature=preprocess_feature, preprocess_label=preprocess_label, augment_data=augment_detections)
     write_data(hyper_params, validation_record_path, validation_gen, validation_gen_params, 8, preprocess_feature=preprocess_feature, preprocess_label=preprocess_label, augment_data=augment_detections)
+
+
+if __name__ == "__main__":
+    # Load the hyper parameters.
+    hyper_params_path = "starttf/examples/bosch_tlr/hyper_params.json"
+    if len(sys.argv) > 1:
+        hyper_params_path = sys.argv[1] + "/" + hyper_params_path
+    hyper_params = load_params(hyper_params_path)
+    prepare(hyper_params)

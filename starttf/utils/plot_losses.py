@@ -30,15 +30,15 @@ class DefaultLossCallback(tf.train.SessionRunHook):
             if self.checkpoint_dir.endswith("/eval"):
                 self.checkpoint_dir = self.checkpoint_dir[:-5]
             if os.path.exists(self.checkpoint_dir + "/images"):
-                for file in os.listdir(self.checkpoint_dir + "/images"):
-                    if file.endswith(".csv"):
-                        self._read_csv(os.path.join(self.checkpoint_dir + "/images", file)) 
+                for fname in os.listdir(self.checkpoint_dir + "/images"):
+                    if fname.endswith(".csv"):
+                        self._read_csv(os.path.join(self.checkpoint_dir + "/images", fname)) 
             self.plot_all()
         if mode not in self.report_storage:
             self.report_storage[mode] = {}
         
     def _read_csv(self, filename):
-        title = filename.split("/")[-1][:-4].replace(".", "/")
+        title = filename.replace("\\", "/").split("/")[-1][:-4].replace(".", "/")
         with open(filename, "r") as f:
             lines = f.read().splitlines()
             cols = lines[0].split(",")
