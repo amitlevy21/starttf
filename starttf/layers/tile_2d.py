@@ -77,22 +77,30 @@ def inverse_tile_2d(input, k_x, k_y, name):
     return tmp
 
 
-def feature_passthrough(early_feat, late_feat, k_x, k_y, outputs, name):
+def feature_passthrough(early_feat, late_feat, filters, name, kernel_size=(1, 1)):
     """
     A feature passthrough layer inspired by yolo9000 and the inverse tiling layer.
 
-    It can be proven, that this layer does the same as conv1x1(concat(inverse_tile(early_feat), late_feat)).
+    It can be proven, that this layer does the same as conv(concat(inverse_tile(early_feat), late_feat)).
     This layer has no activation function.
 
-    :param early_feat: The early feature layer of shape [batch_size, h * k_y, w * k_x, _].
+    :param early_feat: The early feature layer of shape [batch_size, h * s_x, w * s_y, _].
+    s_x and s_y are integers computed internally describing the scale between the layers.
     :param late_feat:  The late feature layer of shape [batch_size, h, w, _].
-    :param k_x: The tiling factor in x direction [int]. Also scale difference between early and late.
-    :param k_y: The tiling factor in y direction [int]. Also scale difference between early and late.
-    :param outputs: The number of output features.
+    :param filters: The number of convolution filters.
     :param name: The name of the layer.
+    :param kernel_size: The size of the kernel. Default (1x1).
     :return: The output tensor of shape [batch_size, h, w, outputs]
     """
+    _, h_early, w_early, c_early = early_feat.get_shape().as_list()
+    _, h_late, w_late, c_late = late_feat.get_shape().as_list()
+
+    s_x = int(w_early / w_late)
+    s_y = int(h_early / h_late)
+
+    assert h_late * s_y == h_early and w_late * s_x == w_early
+
     with tf.variable_scope(name) as scope:
-        early_conv = tf.layers.conv2d(early_feat, filters=outputs, kernel_size=(k_x, k_y), strides=(k_x, k_y))
-        late_conv = tf.layers.conv2d(late_feat, filters=outputs, kernel_size=(1, 1), strides=(1, 1))
+        early_conv = tf.layers.conv2d(early_feat, filters=filters, kernel_size=(s_x * kernel_size[0], s_y * kernel_size[1]), strides=(s_x, s_y))
+        late_conv = tf.layers.conv2d(late_feat, filters=filters, kernel_size=kernel_size, strides=(1, 1))
         return early_conv + late_conv
