@@ -66,6 +66,7 @@ def variable_focus_loss(labels, probs, loss, mask=None, epsilon=1e-8, max_gamma=
         if mask is not None:
             mask = tf.cast(tf.cast(mask, tf.bool), tf.float32)
             active_pixels = tf.reduce_sum(mask)
+            active_pixels = tf_if(tf.equal(active_pixels, 0), epsilon, active_pixels)
             p_avg = tf.reduce_sum(p_t * mask) / active_pixels
         else:
             p_avg = tf.reduce_mean(p_t)
