@@ -1,3 +1,5 @@
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import os
 import tensorflow as tf
@@ -111,9 +113,8 @@ class DefaultLossCallback(tf.train.SessionRunHook):
             if self.inline_plotting and self.mode != "eval":
                 clear_output()
 
-            print("{}: Step {}, Loss {}".format(self.mode, self.report_storage[self.mode]["step"][-1], self.report_storage[self.mode]["loss"][-1]))
-
             if self.mode != "eval":
+                print("{}: Step {}, Loss {}".format(self.mode, self.report_storage[self.mode]["step"][-1], self.report_storage[self.mode]["loss"][-1]))
                 self.plot_all()
 
     def before_run(self, run_context):
